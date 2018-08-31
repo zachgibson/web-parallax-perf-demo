@@ -1,69 +1,71 @@
-import React, { Component, Fragment } from "react";
+import React, { Component } from 'react';
+import throttle from 'lodash.throttle';
 
-import dribbbleBall from "./ball.png";
+import dribbbleBall from './ball.png';
+import dribbbleBall2X from './ball-2x.png';
 
 export default class extends Component {
-  shouldComponentUpdate(props) {
-    console.log(props.scrollY);
-    return true;
-  }
+    state = { show: true, elementHeight: null, topThreshold: null };
 
-  render() {
-    const {
-      speed,
-      scrollY,
-      transition = "all 50ms ease-out",
-      top,
-      left
-    } = this.props;
-    const isInViewport = scrollY < window.innerHeight * 1.25;
+    shouldShow = throttle(() => {
+        const { speed } = this.props;
+        const { topThreshold } = this.state;
 
-    if (true) {
-      return (
-        <div
-          ref={ref => {
-            if (ref) {
-              const element = window.getComputedStyle(ref, null);
+        if (window.scrollY > topThreshold / speed && this.state.show) {
+            this.setState({ show: false });
+        } else if (window.scrollY < topThreshold / speed && !this.state.show) {
+            this.setState({ show: true });
+        }
+    }, 16);
 
-              const transform =
-                element.getPropertyValue("-webkit-transform") ||
-                element.getPropertyValue("-moz-transform") ||
-                element.getPropertyValue("-ms-transform") ||
-                element.getPropertyValue("-o-transform") ||
-                element.getPropertyValue("transform") ||
-                "Either no transform set, or browser doesn't do getComputedStyle";
-
-              // var lastIndex = str.lastIndexOf(" ");
-              const gucci = transform
-                .split("(")[1]
-                .split(")")[0]
-                .split(",");
-
-              console.log(gucci[5]);
-
-              // console.dir(ref);
-            }
-          }}
-          style={{
-            position: "fixed",
+    render() {
+        const {
+            speed,
+            scrollY,
+            transition = 'all 50ms ease-out',
             top,
-            left,
-            // opacity: scrollY * 0.01,
-            transform: `translate3d(0px, ${speed}px, 0px) rotate(${speed /
-              2}deg) scale(${speed / 100})`,
-            transition,
-            willChange: "auto"
-          }}
-        >
-          <img
-            src={dribbbleBall}
-            srcSet={`${dribbbleBall} 2x`}
-            //  style={{ width: 104 }}
-          />
-        </div>
-      );
-    }
+            left
+        } = this.props;
+        const { topThreshold, elementHeight } = this.state;
+        const windowHeight = window.innerHeight;
 
-    return null;
-  }
+        if (elementHeight && !topThreshold) {
+            const topThreshold = windowHeight * top + this.state.elementHeight;
+
+            this.setState({ topThreshold }, () => {
+                this.props.getThreshold(topThreshold / speed);
+            });
+        }
+
+        if (topThreshold) {
+            this.shouldShow();
+        }
+
+        return (
+            <img
+                alt="dribbble ball"
+                ref={ref => {
+                    if (
+                        ref &&
+                        ref.clientHeight !== 0 &&
+                        this.state.elementHeight === null
+                    ) {
+                        this.setState({
+                            elementHeight: ref.clientHeight
+                        });
+                    }
+                }}
+                src={dribbbleBall}
+                srcSet={`${dribbbleBall2X} 2x`}
+                style={{
+                    position: 'fixed',
+                    top: `${top * 100}%`,
+                    left: `${left * 100}%`,
+                    transform: `translate3d(0px, ${scrollY * speed}px, 0px)`,
+                    transition,
+                    willChange: 'transform'
+                }}
+            />
+        );
+    }
 }
